@@ -187,14 +187,17 @@ The system includes fairness audits to assess:
 ## Quick Start Examples
 
 ```bash
-# Check if models are trained
-python check_status.py
+# Make a prediction (easiest way)
+python predict_simple.py
 
-# Test with sample data
-python quick_test.py
+# Test with custom values
+python predict_simple.py 120000 8000 10 780 790
 
-# Make a prediction
-python predict_simple.py 100000 10000 12 750 760
+# See comprehensive usage examples
+python example_usage.py
+
+# Train models from scratch
+python main.py
 ```
 
 ## License
