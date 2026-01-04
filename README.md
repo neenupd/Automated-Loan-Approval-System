@@ -69,32 +69,78 @@ pip install -r requirements.txt
 python main.py
 ```
 
-### Using the Decision Engine
+### Making Predictions
+
+**Simple Command-Line Interface (Recommended):**
+
+The easiest way to make predictions is using `predict_simple.py`:
+
+```bash
+python predict_simple.py [annual_income] [loan_amount] [dti] [fico_low] [fico_high]
+```
+
+**Examples:**
+```bash
+# Test with default values
+python predict_simple.py
+
+# Test with custom values
+python predict_simple.py 120000 8000 10 780 790
+python predict_simple.py 75000 15000 15.5 720 724
+```
+
+**Parameters:**
+- `annual_income`: Annual income in dollars (default: 75000)
+- `loan_amount`: Loan amount requested in dollars (default: 15000)
+- `dti`: Debt-to-income ratio as percentage (default: 15.5)
+- `fico_low`: FICO score low range (default: 720)
+- `fico_high`: FICO score high range (default: 724)
+
+**Output:**
+```
+Decision: APPROVED/REJECTED
+Approval Probability: X.XX%
+Confidence Level: X.XX%
+```
+
+### Using the Decision Engine Programmatically
+
+For advanced usage, you can use the decision engine directly:
 
 ```python
 from src.decision_engine import LoanDecisionEngine
-from src.model_training import load_model
+import joblib
+import pandas as pd
+import numpy as np
 
-# Load trained model
-model = load_model('models/best_model.pkl')
+# Load trained model and components
+model = joblib.load('models/best_model_logistic_regression.pkl')
+scaler = joblib.load('models/scaler.pkl')
+feature_names = joblib.load('models/feature_names.pkl')
+
+# Load processed data (example)
+df = pd.read_csv('data/processed/features_engineered.csv', nrows=1)
+numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+matching_cols = [col for col in numeric_cols if col in feature_names]
+selected_features = matching_cols[:scaler.n_features_in_]
 
 # Initialize decision engine
-engine = LoanDecisionEngine(model, threshold=0.5)
+engine = LoanDecisionEngine(
+    model=model,
+    scaler=scaler,
+    threshold=0.5,
+    feature_names=selected_features
+)
 
 # Make a prediction
-applicant_data = {
-    'annual_inc': 75000,
-    'loan_amnt': 15000,
-    'dti': 15.5,
-    'fico_range_low': 720,
-    # ... other features
-}
-
+applicant_data = df[selected_features].iloc[0].to_dict()
 decision = engine.make_decision(applicant_data)
+
 print(f"Decision: {decision['decision']}")
 print(f"Probability: {decision['probability']:.4f}")
-print(f"Reason Codes: {decision['reason_codes']}")
 ```
+
+See `example_usage.py` for more comprehensive examples.
 
 ## Dataset
 
@@ -137,6 +183,19 @@ The system includes fairness audits to assess:
 - Demographic parity across protected groups
 - Equalized odds
 - Disparate impact analysis
+
+## Quick Start Examples
+
+```bash
+# Check if models are trained
+python check_status.py
+
+# Test with sample data
+python quick_test.py
+
+# Make a prediction
+python predict_simple.py 100000 10000 12 750 760
+```
 
 ## License
 
