@@ -23,6 +23,7 @@ Automated-Loan-Approval-System/
 │   ├── raw/              # Raw Lending Club data
 │   └── processed/        # Processed and feature-engineered data
 ├── src/
+│   ├── __init__.py              # Package initialization
 │   ├── data_preprocessing.py    # Data cleaning and preprocessing
 │   ├── feature_engineering.py   # Feature creation and transformation
 │   ├── model_training.py        # Model training and calibration
@@ -30,11 +31,14 @@ Automated-Loan-Approval-System/
 │   ├── decision_engine.py       # Real-time decision engine
 │   ├── explainability.py        # SHAP-based explainability
 │   └── fairness_audit.py        # Fairness and bias assessment
-├── models/               # Saved trained models
-├── notebooks/            # Jupyter notebooks for exploration
-├── tests/                # Unit tests
+├── models/               # Saved trained models and artifacts
+├── notebooks/            # Jupyter notebooks (optional, for exploration)
+├── tests/                # Unit tests (optional)
+├── main.py               # Main training pipeline script
+├── predict_simple.py     # Simple prediction script (recommended)
 ├── requirements.txt      # Python dependencies
-└── main.py              # Main training script
+├── README.md             # Project documentation
+└── .gitignore           # Git ignore rules
 ```
 
 ## Installation
@@ -140,7 +144,7 @@ print(f"Decision: {decision['decision']}")
 print(f"Probability: {decision['probability']:.4f}")
 ```
 
-See `example_usage.py` for more comprehensive examples.
+For more examples, see the code in `predict_simple.py` or `main.py`.
 
 ## Dataset
 
@@ -192,9 +196,6 @@ python predict_simple.py
 
 # Test with custom values
 python predict_simple.py 120000 8000 10 780 790
-
-# See comprehensive usage examples
-python example_usage.py
 
 # Train models from scratch
 python main.py
