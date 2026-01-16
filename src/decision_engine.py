@@ -41,16 +41,13 @@ class LoanDecisionEngine:
         Returns:
             Array of probabilities
         """
-        # Scale if scaler provided
         if self.scaler is not None:
             X = self.scaler.transform(X)
         
-        # Predict probabilities
         proba = self.model.predict_proba(X)
         
-        # Handle both binary and multi-class outputs
         if proba.ndim > 1 and proba.shape[1] > 1:
-            return proba[:, 1]  # Return probability of positive class
+            return proba[:, 1]
         else:
             return proba.flatten()
     
@@ -64,36 +61,25 @@ class LoanDecisionEngine:
         Returns:
             Dictionary with decision, probability, and metadata
         """
-        # Convert to DataFrame for easier handling
         if isinstance(applicant_data, dict):
             df = pd.DataFrame([applicant_data])
         else:
             df = applicant_data.copy()
         
-        # Ensure features are in correct order
         if self.feature_names:
-            # Add missing features with NaN
             for feature in self.feature_names:
                 if feature not in df.columns:
                     df[feature] = np.nan
             
-            # Reorder columns to match training
             df = df[self.feature_names]
         
-        # Select only numeric columns (drop dates, strings, etc.)
         numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
         if len(numeric_cols) < len(df.columns):
-            # Filter to only numeric columns that match feature names
             numeric_cols = [col for col in numeric_cols if col in self.feature_names]
             df = df[numeric_cols]
         
-        # Convert to numpy array
         X = df.values
-        
-        # Predict probability
         probability = self.predict_proba(X)[0]
-        
-        # Make decision
         decision = 'APPROVED' if probability >= self.threshold else 'REJECTED'
         
         result = {
@@ -115,31 +101,22 @@ class LoanDecisionEngine:
         Returns:
             DataFrame with decisions and probabilities
         """
-        # Ensure features are in correct order
         if self.feature_names:
             for feature in self.feature_names:
                 if feature not in applicants_data.columns:
                     applicants_data[feature] = np.nan
             applicants_data = applicants_data[self.feature_names]
         
-        # Select only numeric columns (drop dates, strings, etc.)
         numeric_cols = applicants_data.select_dtypes(include=[np.number]).columns.tolist()
         if len(numeric_cols) < len(applicants_data.columns):
-            # Filter to only numeric columns that match feature names
             numeric_cols = [col for col in numeric_cols if col in self.feature_names]
             applicants_data = applicants_data[numeric_cols]
         
-        # Convert to numpy array
         X = applicants_data.values
-        
-        # Predict probabilities
         probabilities = self.predict_proba(X)
-        
-        # Make decisions
         decisions = ['APPROVED' if prob >= self.threshold else 'REJECTED' 
                     for prob in probabilities]
         
-        # Create results DataFrame
         results = pd.DataFrame({
             'decision': decisions,
             'probability': probabilities,
@@ -198,14 +175,4 @@ class LoanDecisionEngine:
             feature_names = joblib.load(feature_names_path)
         
         return cls(model, scaler, threshold, feature_names)
-
-
-if __name__ == "__main__":
-    # Example usage
-    print("LoanDecisionEngine module loaded successfully")
-    print("Use this module to make real-time loan approval decisions")
-
-
-
-
 
