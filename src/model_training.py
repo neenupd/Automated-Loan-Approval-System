@@ -52,7 +52,6 @@ class ModelTrainer:
         Returns:
             Tuple of (X_train, X_test, y_train, y_test)
         """
-        # Drop non-numeric columns (dates, strings) that can't be scaled
         numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
         non_numeric_cols = [col for col in X.columns if col not in numeric_cols]
         
@@ -61,17 +60,13 @@ class ModelTrainer:
             X = X[numeric_cols]
         
         self.feature_names = X.columns.tolist()
-        
-        # Split data
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=test_size, random_state=self.random_state, stratify=y
+            X, y, test_size=test_size,             random_state=self.random_state, stratify=y
         )
         
-        # Scale features (now all numeric)
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
         
-        # Apply SMOTE if requested
         if use_smote:
             print("Applying SMOTE to handle class imbalance...")
             smote = SMOTE(random_state=self.random_state)
@@ -97,23 +92,18 @@ class ModelTrainer:
             Dictionary with model and performance metrics
         """
         print("\nTraining Logistic Regression...")
-        
-        # Base model
         lr = LogisticRegression(
             random_state=self.random_state,
             max_iter=1000,
             class_weight='balanced'
         )
         
-        # Calibrate if requested
         if calibrate:
             model = CalibratedClassifierCV(lr, method='isotonic', cv=3)
         else:
             model = lr
         
         model.fit(X_train, y_train)
-        
-        # Predictions
         y_pred_proba = model.predict_proba(X_test)[:, 1]
         y_pred = model.predict(X_test)
         
@@ -279,14 +269,11 @@ class ModelTrainer:
         Returns:
             Dictionary with results for each model
         """
-        # Prepare data
         X_train, X_test, y_train, y_test = self.prepare_data(
             X, y, test_size=test_size, use_smote=use_smote
         )
         
         results = {}
-        
-        # Train all models
         results['logistic_regression'] = self.train_logistic_regression(
             X_train, y_train, X_test, y_test, calibrate=calibrate
         )
@@ -303,7 +290,6 @@ class ModelTrainer:
             X_train, y_train, X_test, y_test, calibrate=calibrate
         )
         
-        # Store test sets for evaluation
         for result in results.values():
             result['y_test'] = y_test
             result['X_test'] = X_test
@@ -327,40 +313,4 @@ class ModelTrainer:
 
 def load_model(filepath: str):
     """Convenience function to load a model."""
-    return joblib.load(filepath)
-
-
-if __name__ == "__main__":
-    # Example usage
-    import sys
-    sys.path.append('.')
-    from data_preprocessing import DataPreprocessor
-    from feature_engineering import FeatureEngineer
-    
-    # Load and preprocess data
-    print("Loading and preprocessing data...")
-    preprocessor = DataPreprocessor()
-    features, target = preprocessor.preprocess(
-        'data/raw/accepted_2007_to_2018Q4.csv',
-        sample_size=50000
-    )
-    
-    # Engineer features
-    print("\nEngineering features...")
-    engineer = FeatureEngineer()
-    features_eng = engineer.engineer_features(features)
-    
-    # Train models
-    print("\nTraining models...")
-    trainer = ModelTrainer()
-    results = trainer.train_all_models(features_eng, target, use_smote=True)
-    
-    # Save best model (to be determined by evaluation)
-    trainer.save_model(trainer.models['xgboost'], 'models/xgboost_model.pkl')
-    trainer.save_scaler('models/scaler.pkl')
-    print("\nTraining complete!")
-
-
-
-
-
+        return joblib.load(filepath)

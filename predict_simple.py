@@ -13,17 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent / 'src'))
 from decision_engine import LoanDecisionEngine
 
 def predict_loan(annual_inc=75000, loan_amnt=15000, dti=15.5, fico_low=720, fico_high=724):
-    """
-    Make a loan approval prediction.
-    
-    Args:
-        annual_inc: Annual income in dollars
-        loan_amnt: Loan amount requested
-        dti: Debt-to-income ratio (percentage)
-        fico_low: FICO score low range
-        fico_high: FICO score high range
-    """
-    
+    """Make a loan approval prediction."""
     print("=" * 70)
     print("LOAN APPROVAL PREDICTION")
     print("=" * 70)
@@ -33,7 +23,6 @@ def predict_loan(annual_inc=75000, loan_amnt=15000, dti=15.5, fico_low=720, fico
     print(f"  Debt-to-Income Ratio: {dti}%")
     print(f"  FICO Score Range: {fico_low}-{fico_high}")
     
-    # Load model and scaler
     try:
         model = joblib.load('models/best_model_logistic_regression.pkl')
         scaler = joblib.load('models/scaler.pkl')
@@ -44,7 +33,6 @@ def predict_loan(annual_inc=75000, loan_amnt=15000, dti=15.5, fico_low=720, fico
         print("Please run main.py first to train models.")
         return None
     
-    # Load a sample from processed data
     features_file = 'data/processed/features_engineered.csv'
     try:
         df = pd.read_csv(features_file, nrows=100)
@@ -52,15 +40,11 @@ def predict_loan(annual_inc=75000, loan_amnt=15000, dti=15.5, fico_low=720, fico
         print(f"\n[ERROR] Processed features not found: {features_file}")
         return None
     
-    # Get numeric columns matching what the scaler expects
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     matching_cols = [col for col in numeric_cols if col in feature_names]
     selected_features = matching_cols[:scaler.n_features_in_]
-    
-    # Get a sample applicant profile
     sample_data = df[selected_features].iloc[0].copy()
     
-    # Update with user inputs where available
     if 'annual_inc' in sample_data.index:
         sample_data['annual_inc'] = annual_inc
     if 'loan_amnt' in sample_data.index:
@@ -72,13 +56,11 @@ def predict_loan(annual_inc=75000, loan_amnt=15000, dti=15.5, fico_low=720, fico
     if 'fico_range_high' in sample_data.index:
         sample_data['fico_range_high'] = fico_high
     
-    # Calculate derived features if they exist
     if 'fico_avg' in sample_data.index:
         sample_data['fico_avg'] = (fico_low + fico_high) / 2
     if 'loan_to_income' in sample_data.index:
         sample_data['loan_to_income'] = loan_amnt / annual_inc if annual_inc > 0 else 0
     
-    # Create decision engine
     engine = LoanDecisionEngine(
         model=model,
         scaler=scaler,
@@ -86,11 +68,9 @@ def predict_loan(annual_inc=75000, loan_amnt=15000, dti=15.5, fico_low=720, fico
         feature_names=selected_features
     )
     
-    # Make prediction
     applicant_dict = sample_data.to_dict()
     decision = engine.make_decision(applicant_dict)
     
-    # Display results
     print("\n" + "=" * 70)
     print("PREDICTION RESULT")
     print("=" * 70)
@@ -108,15 +88,11 @@ def predict_loan(annual_inc=75000, loan_amnt=15000, dti=15.5, fico_low=720, fico
         print("  Consider: improving credit score, reducing debt, or adjusting loan amount.")
     
     print("\n" + "=" * 70)
-    print("Note: This uses a sample profile adjusted with your inputs.")
-    print("For production use, full preprocessing pipeline is recommended.")
-    print("=" * 70)
     
     return decision
 
 
 if __name__ == "__main__":
-    # Parse command-line arguments (optional)
     if len(sys.argv) > 1:
         try:
             annual_inc = float(sys.argv[1]) if len(sys.argv) > 1 else 75000
@@ -129,7 +105,6 @@ if __name__ == "__main__":
             print("Usage: python predict_simple.py [annual_inc] [loan_amnt] [dti] [fico_low] [fico_high]")
             sys.exit(1)
     else:
-        # Use default values
         annual_inc = 75000
         loan_amnt = 15000
         dti = 15.5
@@ -137,4 +112,3 @@ if __name__ == "__main__":
         fico_high = 724
     
     predict_loan(annual_inc, loan_amnt, dti, fico_low, fico_high)
-

@@ -41,17 +41,13 @@ class DataPreprocessor:
         print(f"Loading data from {file_path}...")
         
         if sample_size:
-            # Use skiprows to sample efficiently
-            print(f"Sampling {sample_size} rows during load to save memory...")
-            # First, get total row count (quick)
-            total_rows = sum(1 for _ in open(file_path, 'r', encoding='utf-8', errors='ignore')) - 1  # -1 for header
+            print(f"Sampling {sample_size} rows during load...")
+            total_rows = sum(1 for _ in open(file_path, 'r', encoding='utf-8', errors='ignore')) - 1
             print(f"Total rows in file: {total_rows:,}")
             
             if sample_size >= total_rows:
-                # Sample size is larger than file, load all
                 df = pd.read_csv(file_path, low_memory=False)
             else:
-                # Sample random rows
                 skip = sorted(np.random.RandomState(42).choice(
                     range(1, total_rows + 1), 
                     size=total_rows - sample_size, 
@@ -59,7 +55,6 @@ class DataPreprocessor:
                 ))
                 df = pd.read_csv(file_path, skiprows=skip, low_memory=False)
         else:
-            # Load all data (may cause memory issues for large files)
             df = pd.read_csv(file_path, low_memory=False)
         
         print(f"Loaded {len(df)} records with {len(df.columns)} columns")
@@ -76,7 +71,6 @@ class DataPreprocessor:
         Returns:
             DataFrame with post-origination features removed
         """
-        # Common post-origination features to exclude
         post_origination = [
             'total_pymnt', 'total_pymnt_inv', 'total_rec_prncp',
             'total_rec_int', 'total_rec_late_fee', 'recoveries',
@@ -86,7 +80,6 @@ class DataPreprocessor:
             'last_fico_range_high', 'last_fico_range_low'
         ]
         
-        # Remove columns that exist in the dataframe
         existing_post_orig = [col for col in post_origination if col in df.columns]
         if existing_post_orig:
             df = df.drop(columns=existing_post_orig)
@@ -109,10 +102,7 @@ class DataPreprocessor:
         if self.target_column not in df.columns:
             raise ValueError(f"Target column '{self.target_column}' not found in data")
         
-        # Create binary target: 1 for fully paid (eligible), 0 for default/charged off (ineligible)
         df['eligible'] = (df[self.target_column] == 'Fully Paid').astype(int)
-        
-        # Remove rows with ambiguous status (e.g., "Current", "In Grace Period")
         valid_statuses = ['Fully Paid', 'Charged Off', 'Default']
         df = df[df[self.target_column].isin(valid_statuses)].copy()
         
@@ -134,7 +124,6 @@ class DataPreprocessor:
         Returns:
             DataFrame with handled missing values
         """
-        # Drop columns with more than missing_threshold missing values
         missing_ratio = df.isnull().sum() / len(df)
         cols_to_drop = missing_ratio[missing_ratio > missing_threshold].index.tolist()
         
@@ -142,13 +131,11 @@ class DataPreprocessor:
             df = df.drop(columns=cols_to_drop)
             print(f"Dropped {len(cols_to_drop)} columns with >{missing_threshold*100}% missing values")
         
-        # For numeric columns, impute with median
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         for col in numeric_cols:
             if df[col].isnull().sum() > 0:
                 df[col].fillna(df[col].median(), inplace=True)
         
-        # For categorical columns, impute with mode
         categorical_cols = df.select_dtypes(include=['object']).columns
         for col in categorical_cols:
             if df[col].isnull().sum() > 0:
@@ -172,18 +159,14 @@ class DataPreprocessor:
             DataFrame with encoded categorical variables
         """
         df_encoded = df.copy()
-        
-        # Date columns to exclude from encoding (need to be preserved for feature engineering)
         date_columns = ['earliest_cr_line', 'issue_d', 'last_pymnt_d', 'next_pymnt_d', 
                        'last_credit_pull_d', 'hardship_start_date', 'hardship_end_date',
                        'payment_plan_start_date', 'debt_settlement_flag_date', 'settlement_date']
         
         if columns is None:
             categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-            # Exclude target column if it's categorical
             if self.target_column in categorical_cols:
                 categorical_cols.remove(self.target_column)
-            # Exclude date columns (they'll be handled in feature engineering)
             categorical_cols = [col for col in categorical_cols if col not in date_columns]
         else:
             categorical_cols = [col for col in columns if col not in date_columns]
@@ -214,26 +197,14 @@ class DataPreprocessor:
         Returns:
             Tuple of (features DataFrame, target Series)
         """
-        # Load data (sampling during load if sample_size is specified)
         df = self.load_data(file_path, sample_size=sample_size)
-        
-        # Remove post-origination features
         df = self.remove_post_origination_features(df)
-        
-        # Create target variable
         df = self.create_target_variable(df)
-        
-        # Handle missing values
         df = self.handle_missing_values(df, missing_threshold=missing_threshold)
         
-        # Separate features and target
         target = df['eligible']
         features = df.drop(columns=['eligible', self.target_column], errors='ignore')
-        
-        # Encode categorical variables
         features = self.encode_categorical_variables(features)
-        
-        # Store feature columns
         self.feature_columns = features.columns.tolist()
         
         print(f"\nPreprocessing complete!")
@@ -241,20 +212,4 @@ class DataPreprocessor:
         print(f"Target distribution: {target.value_counts().to_dict()}")
         
         return features, target
-
-
-if __name__ == "__main__":
-    # Example usage
-    preprocessor = DataPreprocessor()
-    
-    # Note: Update path to your actual data file
-    features, target = preprocessor.preprocess(
-        file_path='data/raw/accepted_2007_to_2018Q4.csv',
-        sample_size=50000  # Use smaller sample for testing
-    )
-    
-    # Save processed data
-    features.to_csv('data/processed/features.csv', index=False)
-    target.to_csv('data/processed/target.csv', index=False)
-    print("\nProcessed data saved to data/processed/")
 
